@@ -18,7 +18,10 @@ SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
 def get_credentials():
-    b64_json = os.getenv("GOOGLE_SERVICE_ACCOUNT_B64")
+    print("GOOGLE_SERVICE_ACCOUNT_B64 =", os.getenv("GOOGLE_SERVICE_ACCOUNT_B64"))
+    print("GOOGLE_SERVICE_ACCOUNT_FILE =", os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE"))
+    if os.getenv("GOOGLE_SERVICE_ACCOUNT_B64"):
+     b64_json = os.getenv("GOOGLE_SERVICE_ACCOUNT_B64")
     if b64_json:
         json_str = base64.b64decode(b64_json).decode('utf-8')
         service_account_info = json.loads(json_str)
