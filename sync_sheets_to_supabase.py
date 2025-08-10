@@ -1,31 +1,34 @@
-import os
+import base64
 import json
+import os
 from supabase import create_client
 import gspread
 from google.oauth2.service_account import Credentials
 from dotenv import load_dotenv
 
-load_dotenv()  # load .env locally
+load_dotenv()
 
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive"
 ]
 
-SERVICE_ACCOUNT_JSON = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON")
-SERVICE_ACCOUNT_FILE = os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE")
 SHEET_ID = os.getenv("SHEET_ID")
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
 def get_credentials():
-    if SERVICE_ACCOUNT_JSON:
-        service_account_info = json.loads(SERVICE_ACCOUNT_JSON)
+    b64_json = os.getenv("GOOGLE_SERVICE_ACCOUNT_B64")
+    if b64_json:
+        json_str = base64.b64decode(b64_json).decode('utf-8')
+        service_account_info = json.loads(json_str)
         creds = Credentials.from_service_account_info(service_account_info, scopes=SCOPES)
-    elif SERVICE_ACCOUNT_FILE:
-        creds = Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
     else:
-        raise Exception("No Google service account credentials found in env variables.")
+        service_account_file = os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE")
+        if service_account_file:
+            creds = Credentials.from_service_account_file(service_account_file, scopes=SCOPES)
+        else:
+            raise Exception("No Google service account credentials found.")
     return creds
 
 def read_sheet():
@@ -33,7 +36,7 @@ def read_sheet():
     gc = gspread.authorize(creds)
     sh = gc.open_by_key(SHEET_ID)
     worksheet = sh.worksheet("Meta")
-    return worksheet.get_all_records()  # list of dicts
+    return worksheet.get_all_records()
 
 def upsert_to_supabase(records):
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
