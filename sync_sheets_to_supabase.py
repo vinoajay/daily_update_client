@@ -1,3 +1,4 @@
+import requests
 import streamlit as st
 import os
 import json
@@ -107,5 +108,23 @@ else:
                 "time_of_day": time_of_day
             }
             st.json(payload)
+            # --- Telegram Sending Logic ---
+        TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+        TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+
+        if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:
+            message = json.dumps(payload, indent=2)  # pretty JSON text
+            send_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+            resp = requests.post(send_url, data={
+                "chat_id": TELEGRAM_CHAT_ID,
+                "text": message,
+                "parse_mode": "Markdown"
+            })
+            if resp.status_code == 200:
+                st.success("Sent to Telegram!")
+            else:
+                st.error(f"Failed to send to Telegram: {resp.text}")
+        else:
+            st.warning("Telegram credentials not set. Skipping Telegram send.")
             # TODO: Send payload to your n8n webhook here if you want (via requests.post)
             st.success("Payload ready! Send this JSON to your Telegram or n8n workflow.")
