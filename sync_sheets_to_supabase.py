@@ -20,6 +20,9 @@ SHEET_ID = os.getenv("SHEET_ID")
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
+# Create Supabase client once
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+
 def get_credentials():
     if os.getenv("GOOGLE_SERVICE_ACCOUNT_B64"):
         b64_json = os.getenv("GOOGLE_SERVICE_ACCOUNT_B64")
@@ -40,7 +43,6 @@ def read_sheet():
     return worksheet.get_all_records()
 
 def upsert_to_supabase(records):
-    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
     for r in records:
         payload = {
             "site_name": r.get("Site Name") or r.get("site_name"),
@@ -55,8 +57,6 @@ def upsert_to_supabase(records):
         supabase.table("sites").upsert(payload, on_conflict="site_name").execute()
 
 def fetch_sites_and_labours():
-    # Fetch sites and labours from Supabase to use in dropdowns
-    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
     data = supabase.table("sites").select("site_name, labour_name").execute()
     sites = sorted(set([item["site_name"] for item in data.data if item.get("site_name")]))
     labours = sorted(set([item["labour_name"] for item in data.data if item.get("labour_name")]))
@@ -108,23 +108,24 @@ else:
                 "time_of_day": time_of_day
             }
             st.json(payload)
+            
             # --- Telegram Sending Logic ---
-        TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-        TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+            TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+            TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
-        if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:
-            message = json.dumps(payload, indent=2)  # pretty JSON text
-            send_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-            resp = requests.post(send_url, data={
-                "chat_id": TELEGRAM_CHAT_ID,
-                "text": message,
-                "parse_mode": "Markdown"
-            })
-            if resp.status_code == 200:
-                st.success("Sent to Telegram!")
+            if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:
+                message = json.dumps(payload, indent=2)  # pretty JSON text
+                send_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+                resp = requests.post(send_url, data={
+                    "chat_id": TELEGRAM_CHAT_ID,
+                    "text": message,
+                    "parse_mode": "Markdown"
+                })
+                if resp.status_code == 200:
+                    st.success("Sent to Telegram!")
+                else:
+                    st.error(f"Failed to send to Telegram: {resp.text}")
             else:
-                st.error(f"Failed to send to Telegram: {resp.text}")
-        else:
-            st.warning("Telegram credentials not set. Skipping Telegram send.")
-            # TODO: Send payload to your n8n webhook here if you want (via requests.post)
-            st.success("Payload ready! Send this JSON to your Telegram or n8n workflow.")
+                st.warning("Telegram credentials not set. Skipping Telegram send.")
+                # TODO: Send payload to your n8n webhook here if you want (via requests.post)
+                st.success("Payload ready! Send this JSON to your Telegram or n8n workflow.")
