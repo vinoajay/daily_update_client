@@ -9,6 +9,8 @@ from google.oauth2.service_account import Credentials
 from dotenv import load_dotenv
 
 load_dotenv()
+N8N_WEBHOOK_URL = os.getenv("N8N_WEBHOOK_URL")
+
 
 # --- Google Sheets / Supabase Config ---
 SCOPES = [
@@ -127,5 +129,15 @@ else:
                     st.error(f"Failed to send to Telegram: {resp.text}")
             else:
                 st.warning("Telegram credentials not set. Skipping Telegram send.")
+            # --- n8n Webhook Trigger Logic ---
+if N8N_WEBHOOK_URL:
+    try:
+        r = requests.post(N8N_WEBHOOK_URL, json=payload, timeout=10)
+        if r.status_code == 200:
+            st.success("Sent to n8n webhook!")
+        else:
+            st.error(f"Failed to send to n8n webhook: {r.text}")
+    except Exception as e:
+        st.error(f"Error sending to n8n webhook: {e}")  
                 # TODO: Send payload to your n8n webhook here if you want (via requests.post)
-                st.success("Payload ready! Send this JSON to your Telegram or n8n workflow.")
+    st.success("Payload ready! Send this JSON to your Telegram or n8n workflow.")
